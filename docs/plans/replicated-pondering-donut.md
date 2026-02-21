@@ -1,5 +1,8 @@
 # Plan: Powertools Usage Tracking via Claude Code Hooks
 
+> **Status:** Implemented (2026-02-21)
+> **Commit:** cae0bd3
+
 ## Context
 
 Нет способа узнать, как Claude Code использует установленные powertools. Нужна наблюдаемость: какие инструменты вызываются, как часто, в каких проектах. Данные нужны для статистики, реальных кейсов в README, и понимания ROI от установки.
