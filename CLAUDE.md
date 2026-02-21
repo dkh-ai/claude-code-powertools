@@ -13,8 +13,13 @@ claude-code-powertools/
 ├── config/
 │   ├── claude-md-toolbox.md      # Шаблон блока для CLAUDE.md (полный пресет)
 │   └── zshrc-integrations.sh     # Шаблон блока для .zshrc (полный пресет)
+├── hooks/
+│   └── powertools-logger.sh      # PostToolUse хук для трекинга использования
+├── scripts/
+│   ├── setup-tracking.sh         # Настройка трекинга (одноразовая)
+│   └── usage-report.sh           # Отчёт по использованию powertools
 ├── install.sh                    # Основной инсталлятор (~854 строки)
-├── uninstall.sh                  # Деинсталлятор (~182 строки)
+├── uninstall.sh                  # Деинсталлятор
 ├── README.md                     # Пользовательская документация
 └── LICENSE                       # MIT
 ```
@@ -128,6 +133,26 @@ Bash 3.2-совместимый скрипт (без ассоциативных 
 
 Правится `apply_preset` (`install.sh:268–273`) — индексы в `TOOL_SELECTED[i]=1`.
 
+## Трекинг использования
+
+Опциональная система наблюдаемости: PostToolUse хук логирует вызовы powertools.
+
+```
+hooks/
+└── powertools-logger.sh       # PostToolUse хук → ~/.claude/powertools-usage.jsonl
+scripts/
+├── setup-tracking.sh          # Настройка: копирует хук + обновляет settings.json
+└── usage-report.sh            # Анализ логов (text/markdown/json)
+```
+
+**Настройка:** `bash scripts/setup-tracking.sh` (одноразово, идемпотентно)
+
+**Как работает:** хук перехватывает Bash-вызовы, извлекает binary, сверяет со списком powertools, пишет JSONL-запись (`ts`, `tool`, `cmd`, `project`, `session`).
+
+**Отчёт:** `bash scripts/usage-report.sh [--format text|markdown|json] [--days N]`
+
+**Удаление:** `bash uninstall.sh` удаляет хук и конфиг из settings.json (шаг 4).
+
 ## Известные ограничения
 
 1. **macOS only** — проверка `uname -s` в `preflight`, зависимость от Homebrew
@@ -143,6 +168,9 @@ Bash 3.2-совместимый скрипт (без ассоциативных 
 # Статический анализ
 shellcheck install.sh
 shellcheck uninstall.sh
+shellcheck hooks/powertools-logger.sh
+shellcheck scripts/setup-tracking.sh
+shellcheck scripts/usage-report.sh
 
 # Dry-run (превью без изменений)
 bash install.sh --dry-run
@@ -154,4 +182,10 @@ bash install.sh --preset claude --yes
 bash install.sh --preset claude --yes
 grep -c "claude-code-powertools" ~/.zshrc        # ожидается 2 (begin + end)
 grep -c "claude-code-powertools" ~/.claude/CLAUDE.md  # ожидается 2
+
+# Трекинг: тест хука
+echo '{"tool_name":"Bash","tool_input":{"command":"tree -L 2"},"cwd":"/tmp/test","session_id":"test"}' | bash hooks/powertools-logger.sh
+
+# Трекинг: dry-run настройки
+bash scripts/setup-tracking.sh --dry-run
 ```

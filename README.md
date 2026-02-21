@@ -348,6 +348,56 @@ bash install.sh --preset all --yes
 curl -sL .../install.sh | bash
 ```
 
+## Usage Tracking
+
+Optional: track which powertools Claude Code actually uses. A PostToolUse hook logs every invocation to a JSONL file for later analysis.
+
+### Setup
+
+```bash
+cd claude-code-powertools
+bash scripts/setup-tracking.sh
+```
+
+This copies a hook script to `~/.claude/hooks/` and registers it in `~/.claude/settings.json`. Run with `--dry-run` to preview changes.
+
+### View Report
+
+```bash
+bash scripts/usage-report.sh                    # Text report (default)
+bash scripts/usage-report.sh --format markdown  # Markdown table
+bash scripts/usage-report.sh --format json      # Machine-readable
+bash scripts/usage-report.sh --days 7           # Last week only
+```
+
+Example output:
+
+```
+  Powertools Usage Report
+  ──────────────────────────────────────────
+
+  Period: last 30 days
+  Total calls: 142
+
+  By Tool
+  tree            47  ████████████████
+  shellcheck      31  ██████████
+  jq              22  ███████
+  fd              18  ██████
+  scc              9  ███
+  yq               8  ██
+  difft            7  ██
+
+  By Project
+  my-api                             52
+  claude-code-powertools             38
+  web-dashboard                      29
+```
+
+### How It Works
+
+The hook receives JSON from Claude Code after each Bash tool call, extracts the command binary, and checks it against the powertools list. Matching calls are appended to `~/.claude/powertools-usage.jsonl`. The hook is non-blocking (always exits 0) and requires `jq`.
+
 ## Uninstall
 
 ```bash
@@ -364,8 +414,9 @@ The uninstaller:
 1. Removes the managed block from `.zshrc`
 2. Removes the managed block from `CLAUDE.md`
 3. Reverts `git config diff.external` if set to `difft`
-4. Offers to `brew uninstall` each tool (with per-tool confirmation)
-5. Offers to restore backup files created during installation
+4. Removes usage tracking hook and its config from `settings.json`
+5. Offers to `brew uninstall` each tool (with per-tool confirmation)
+6. Offers to restore backup files created during installation
 
 ## FAQ
 

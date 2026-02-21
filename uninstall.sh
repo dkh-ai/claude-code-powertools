@@ -18,6 +18,9 @@ MARKER_CLAUDE_END="<!-- claude-code-powertools:end -->"
 
 ZSHRC="$HOME/.zshrc"
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+HOOK_FILE="$HOME/.claude/hooks/powertools-logger.sh"
+SETTINGS="$HOME/.claude/settings.json"
+HOOK_CMD="bash ~/.claude/hooks/powertools-logger.sh"
 
 # ── Colors ─────────────────────────────────────────────────────────────
 
@@ -110,7 +113,34 @@ else
     dim "  git diff.external not set to difft — skipping"
 fi
 
-# ── 4. Offer to uninstall brew packages ───────────────────────────────
+# ── 4. Remove usage tracking hook ─────────────────────────────────────
+
+if [ -f "$HOOK_FILE" ]; then
+    rm "$HOOK_FILE"
+    info "Removed usage tracking hook"
+    removed=$((removed + 1))
+    # Clean up empty hooks directory
+    if [ -d "$HOME/.claude/hooks" ] && [ -z "$(ls -A "$HOME/.claude/hooks" 2>/dev/null)" ]; then
+        rmdir "$HOME/.claude/hooks" 2>/dev/null || true
+    fi
+else
+    dim "  No usage tracking hook found"
+fi
+
+# Remove hook from settings.json
+if [ -f "$SETTINGS" ] && command -v jq >/dev/null 2>&1; then
+    if jq -e --arg cmd "$HOOK_CMD" '.hooks.PostToolUse[]? | select(.matcher == "Bash") | .hooks[]? | select(.command == $cmd)' "$SETTINGS" >/dev/null 2>&1; then
+        # Remove matching entries from PostToolUse array
+        jq --arg cmd "$HOOK_CMD" '(.hooks.PostToolUse) |= map(.hooks |= map(select(.command == $cmd | not)) | select(.hooks | length > 0)) | if (.hooks.PostToolUse | length) == 0 then del(.hooks.PostToolUse) else . end | if (.hooks | length) == 0 then del(.hooks) else . end' "$SETTINGS" > "${SETTINGS}.tmp"
+        mv "${SETTINGS}.tmp" "$SETTINGS"
+        info "Removed hook from settings.json"
+        removed=$((removed + 1))
+    else
+        dim "  No powertools hook found in settings.json"
+    fi
+fi
+
+# ── 5. Offer to uninstall brew packages ──────────────────────────────
 
 echo ""
 installed_packages=""
@@ -146,7 +176,7 @@ else
     dim "  No powertools brew packages found"
 fi
 
-# ── 5. Offer to restore backups ───────────────────────────────────────
+# ── 6. Offer to restore backups ───────────────────────────────────────
 
 echo ""
 if [ -f "${ZSHRC}.powertools-backup" ] || [ -f "${CLAUDE_MD}.powertools-backup" ]; then
