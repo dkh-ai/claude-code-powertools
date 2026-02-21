@@ -1,5 +1,7 @@
 # claude-code-powertools
 
+[Русская версия](README_RU.md)
+
 CLI tools that make Claude Code smarter and your terminal more powerful. One command installs and configures everything.
 
 ```bash
